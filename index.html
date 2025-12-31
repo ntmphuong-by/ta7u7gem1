@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit 7 Traffic: Full Translation & Audio</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+        :root {
+            --primary: #2980b9;
+            --secondary: #27ae60;
+            --accent: #f1c40f;
+            --wrong: #c0392b;
+            --bg: #ecf0f1;
+            --text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            height: 100%;
+            position: relative;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .stats {
+            font-size: 1.1rem;
+            font-weight: 700;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        /* PROGRESS BAR */
+        .progress-container {
+            height: 8px;
+            background: #bdc3c7;
+            width: 100%;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--secondary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .timer-line {
+            position: absolute;
+            top: 0; left: 0;
+            height: 8px;
+            background: var(--accent);
+            width: 0%;
+            opacity: 0.8;
+        }
+
+        /* MAIN CONTENT */
+        main {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-badge {
+            display: inline-block;
+            background: #8e44ad;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        /* DIALOGUE & READING BOX */
+        .reading-box {
+            background: #fdfbf7;
+            border-left: 5px solid var(--secondary);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 1rem;
+            line-height: 1.6;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+        }
+        
+        .role { font-weight: bold; margin-right: 5px; }
+        .Mark { color: #2980b9; }
+        .Lan { color: #c0392b; }
+        .Narrator { color: #555; font-style: italic; }
+        
+        .vn-trans {
+            display: block;
+            color: #7f8c8d;
+            font-style: italic;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            padding-left: 10px;
+            border-left: 2px solid #bdc3c7;
+        }
+        .hidden { display: none; }
+
+        .btn-control {
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.2s;
+        }
+        .btn-control:hover { background: #2c3e50; }
+        .btn-control.playing { background: var(--secondary); animation: pulse 1s infinite; }
+        .btn-trans { background: #e67e22; }
+        .btn-trans:hover { background: #d35400; }
+
+        @keyframes pulse { 0% {opacity:1;} 50% {opacity:0.7;} 100% {opacity:1;} }
+
+        /* VISUAL QUESTION */
+        .visual-box {
+            font-size: 4rem;
+            text-align: center;
+            margin: 10px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border: 2px dashed #bdc3c7;
+            border-radius: 10px;
+            display: inline-block;
+            width: fit-content;
+            align-self: center;
+        }
+
+        /* QUESTION TEXT */
+        .question-text {
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        /* OPTIONS */
+        .options-grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: 1fr;
+        }
+        @media (min-width: 600px) { .options-grid { grid-template-columns: 1fr 1fr; } }
+
+        .opt-btn {
+            background: white;
+            border: 2px solid #bdc3c7;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            text-align: left;
+            cursor: pointer;
+            transition: 0.2s;
+            color: var(--text);
+            position: relative;
+        }
+        .opt-btn:hover:not(.disabled) { border-color: var(--primary); background: #ebf5fb; transform: translateY(-2px); }
+        
+        .opt-btn.correct { 
+            background: #d5f5e3; border-color: var(--secondary); color: #1e8449; font-weight: bold; 
+        }
+        .opt-btn.wrong { 
+            background: #fadbd8; border-color: var(--wrong); color: #943126; opacity: 0.7; 
+        }
+        .opt-btn.disabled { pointer-events: none; }
+
+        /* FEEDBACK */
+        .feedback {
+            margin-top: 20px;
+            padding: 15px;
+            background: #eafaf1;
+            border-radius: 10px;
+            border: 1px solid #a9dfbf;
+            display: none;
+            animation: slideUp 0.3s;
+        }
+        .feedback.show { display: block; }
+        @keyframes slideUp { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+        .fb-status { font-weight: 900; font-size: 1.2rem; color: var(--secondary); margin-bottom: 5px; }
+        .fb-trans { font-style: italic; color: #555; display: block; margin-bottom: 8px; }
+        .fb-exp { color: var(--primary); font-weight: 700; line-height: 1.4; }
+        .auto-msg { text-align: right; font-size: 0.8rem; color: #95a5a6; margin-top: 10px; font-style: italic; }
+
+        /* START & END SCREENS */
+        .screen-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: white;
+            z-index: 20;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .start-btn {
+            font-size: 1.5rem; padding: 15px 50px;
+            background: var(--primary); color: white; border: none;
+            border-radius: 50px; cursor: pointer; margin-top: 30px;
+            box-shadow: 0 5px 15px rgba(41,128,185,0.4);
+            transition: transform 0.2s;
+        }
+        .start-btn:hover { transform: scale(1.05); }
+
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <header>
+        <div style="font-size: 1.2rem; font-weight: 900;">🚦 Traffic Unit 7 (V13)</div>
+        <div class="stats">Điểm: <span id="score">0</span>/<span id="total">0</span></div>
+    </header>
+    
+    <div class="progress-container">
+        <div class="progress-fill" id="progress"></div>
+        <div class="timer-line" id="timer"></div>
+    </div>
+
+    <main id="game-area">
+        </main>
+
+    <div id="start-screen" class="screen-overlay">
+        <h1 style="color:var(--primary); font-size:3rem; margin-bottom:10px;">TRAFFIC MASTER</h1>
+        <p style="font-size:1.2rem; color:#555;">Full 68 câu hỏi SGK - Có dịch đoạn đọc</p>
+        <ul style="text-align:left; background:#f1f2f6; padding:20px; border-radius:10px; list-style:none;">
+            <li>✅ <b>Vocabulary:</b> Phương tiện, Biển báo</li>
+            <li>✅ <b>Grammar:</b> It (khoảng cách), Should/Shouldn't</li>
+            <li>✅ <b>Skills:</b> Đọc hiểu luật giao thông (Có dịch)</li>
+            <li>✅ <b>Audio:</b> Nghe hội thoại bản xứ</li>
+        </ul>
+        <button class="start-btn" onclick="startGame()">BẮT ĐẦU NGAY</button>
+    </div>
+
+    <div id="end-screen" class="screen-overlay" style="display:none;">
+        <h1 style="color:var(--secondary); font-size:3rem;">HOÀN THÀNH!</h1>
+        <h2 style="font-size:2rem; margin:20px;">Điểm số: <span id="final-score">0</span></h2>
+        <button class="start-btn" onclick="location.reload()">Làm lại bài</button>
+    </div>
+</div>
+
+<script>
+/* =================================================================
+   1. DỮ LIỆU SGK (FULL TEXT & QUESTIONS)
+   ================================================================= */
+
+// HỘI THOẠI LAN & MARK (Getting Started) - Có dịch
+const txtGS = [
+    {r:"Lan", t:"Hi, Mark. How are you?", v:"Chào Mark. Bạn khỏe không?"},
+    {r:"Mark", t:"Good, thanks. And you? What did you do last Sunday?", v:"Khỏe, cảm ơn. Còn bạn? Chủ nhật rồi bạn làm gì?"},
+    {r:"Lan", t:"I'm fine. Last Sunday afternoon, I cycled round the lake near my home.", v:"Mình ổn. Chiều chủ nhật trước, mình đạp xe quanh hồ gần nhà."},
+    {r:"Mark", t:"That sounds really healthy. By the way, do you often cycle to school too?", v:"Nghe lành mạnh thật đấy. Nhân tiện, bạn có thường đạp xe đi học không?"},
+    {r:"Lan", t:"Yes, but sometimes my mum takes me on her motorbike.", v:"Có, nhưng thỉnh thoảng mẹ chở mình bằng xe máy."},
+    {r:"Mark", t:"How far is it from your home to school?", v:"Từ nhà bạn đến trường bao xa?"},
+    {r:"Lan", t:"It's about two kilometres.", v:"Khoảng 2 cây số."},
+    {r:"Mark", t:"How long does it take you to cycle there?", v:"Bạn đạp xe đến đó mất bao lâu?"},
+    {r:"Lan", t:"About 10 minutes. Sometimes, when there are traffic jams, it takes longer.", v:"Khoảng 10 phút. Thỉnh thoảng khi kẹt xe thì lâu hơn."},
+    {r:"Mark", t:"You should be careful, especially when you cross the road.", v:"Bạn nên cẩn thận, nhất là khi qua đường."},
+    {r:"Lan", t:"Right. The roads get really crowded.", v:"Đúng rồi. Đường xá đông đúc lắm."},
+    {r:"Mark", t:"Hey, how about going cycling round the lake this Sunday?", v:"Này, hay là chủ nhật này đi đạp xe quanh hồ đi?"},
+    {r:"Lan", t:"Great! Can you come to my house at 3 p.m.?", v:"Tuyệt! Bạn đến nhà mình lúc 3 giờ chiều được không?"},
+    {r:"Mark", t:"OK, Lan. See you then.", v:"Ok Lan. Gặp lại sau nhé."}
+];
+
+// BÀI ĐỌC TRAFFIC RULES (Skills 1) - Có dịch
+const txtRules = [
+    {r:"Narrator", t:"These are some rules about road safety. It is important to obey these rules when you are a road user.", v:"Đây là một số quy tắc về an toàn giao thông. Rất quan trọng phải tuân thủ khi bạn tham gia giao thông."},
+    {r:"Narrator", t:"Pedestrians:", v:"Người đi bộ:"},
+    {r:"Narrator", t:"1. Always look carefully when you cross the street.", v:"1. Luôn quan sát cẩn thận khi sang đường."},
+    {r:"Narrator", t:"2. Use the pavement or footpath.", v:"2. Sử dụng vỉa hè hoặc đường đi bộ."},
+    {r:"Narrator", t:"3. Walk across the street at the zebra crossing.", v:"3. Sang đường tại vạch kẻ đường dành cho người đi bộ."},
+    {r:"Narrator", t:"4. Don't cross the road on a red light.", v:"4. Không sang đường khi đèn đỏ."},
+    {r:"Narrator", t:"Cyclists:", v:"Người đi xe đạp:"},
+    {r:"Narrator", t:"1. Always keep both hands on the handlebars.", v:"1. Luôn giữ hai tay trên ghi đông."},
+    {r:"Narrator", t:"2. Wear helmets, and always use the cycle lane.", v:"2. Đội mũ bảo hiểm và luôn đi trong làn xe đạp."},
+    {r:"Narrator", t:"3. Give a signal before you turn.", v:"3. Ra tín hiệu trước khi rẽ."},
+    {r:"Narrator", t:"4. Don't carry more than one passenger.", v:"4. Không chở quá một người."},
+    {r:"Narrator", t:"Passengers:", v:"Hành khách:"},
+    {r:"Narrator", t:"1. Fasten your seatbelt when you are in a car.", v:"1. Thắt dây an toàn khi ngồi trong ô tô."},
+    {r:"Narrator", t:"2. Wait for buses to fully stop before getting on or off.", v:"2. Chờ xe buýt dừng hẳn trước khi lên hoặc xuống."},
+    {r:"Narrator", t:"3. Don't talk to the driver when he or she is driving.", v:"3. Không nói chuyện với tài xế khi họ đang lái xe."},
+    {r:"Narrator", t:"4. Don't stick any body parts out of the window of a moving vehicle.", v:"4. Không thò bất kỳ bộ phận nào của cơ thể ra ngoài cửa sổ."}
+];
+
+// DANH SÁCH CÂU HỎI (68 Câu)
+// Cấu trúc: {sec: 'Phần', type: 'text/vis/dialogue', content: [], q: 'Câu hỏi', ans: 'Đáp án đúng', wrongs: ['Sai 1', 'Sai 2', 'Sai 3'], trans: 'Dịch', exp: 'Giải thích'}
+const db = [
+    // --- GETTING STARTED ---
+    {
+        sec: "Getting Started", type: "dialogue", content: txtGS,
+        q: "1. How does Lan often go to school?",
+        ans: "By bicycle", wrongs: ["By motorbike", "On foot"],
+        trans: "Lan thường đi học bằng gì? -> Xe đạp.", exp: "Lan trả lời 'Yes' khi Mark hỏi về việc đạp xe thường xuyên."
+    },
+    {
+        sec: "Getting Started", type: "text",
+        q: "2. It normally takes Lan ______ to get to school.",
+        ans: "about 10 minutes", wrongs: ["2 minutes", "20 minutes"],
+        trans: "Lan mất khoảng 10 phút.", exp: "Lan nói: 'About 10 minutes'."
+    },
+    {
+        sec: "Getting Started", type: "text",
+        q: "3. Lan and Mark agree to go cycling ______.",
+        ans: "at the weekend", wrongs: ["tomorrow", "every day"],
+        trans: "Họ đi xe đạp vào cuối tuần.", exp: "Mark rủ: 'this Sunday'."
+    },
+    // Ex 3: Fill words
+    { sec: "Getting Started (Ex 3)", type: "text", q: "4. Last Sunday afternoon, Lan ______ round the lake.", ans: "cycled", wrongs: ["walked", "ran"], trans: "Lan đã ĐẠP XE quanh hồ.", exp: "Trong bài: 'I cycled round the lake'." },
+    { sec: "Getting Started (Ex 3)", type: "text", q: "5. Mark says: 'You ______ be careful'.", ans: "should", wrongs: ["can", "will"], trans: "Bạn NÊN cẩn thận.", exp: "Mark khuyên Lan." },
+    { sec: "Getting Started (Ex 3)", type: "text", q: "6. Traffic ______ are a problem in big cities.", ans: "jams", wrongs: ["lights", "rules"], trans: "TẮC đường.", exp: "Traffic jams." },
+    { sec: "Getting Started (Ex 3)", type: "text", q: "7. This road is very ______ during rush hours.", ans: "crowded", wrongs: ["quiet", "safe"], trans: "Đường rất ĐÔNG ĐÚC.", exp: "Crowded." },
+    
+    // Ex 4: Transport (Pictures -> Emoji)
+    { sec: "Getting Started (Ex 4)", type: "vis", vis: "🚲", q: "What is this?", ans: "bicycle", wrongs: ["motorbike", "bus", "car"], trans: "Xe đạp.", exp: "" },
+    { sec: "Getting Started (Ex 4)", type: "vis", vis: "🚗", q: "What is this?", ans: "car", wrongs: ["bus", "train", "plane"], trans: "Xe ô tô.", exp: "" },
+    { sec: "Getting Started (Ex 4)", type: "vis", vis: "🚌", q: "What is this?", ans: "bus", wrongs: ["train", "ship", "boat"], trans: "Xe buýt.", exp: "" },
+    { sec: "Getting Started (Ex 4)", type: "vis", vis: "🏍️", q: "What is this?", ans: "motorbike", wrongs: ["bicycle", "plane", "car"], trans: "Xe máy.", exp: "" },
+    { sec: "Getting Started (Ex 4)", type: "vis", vis: "✈️", q: "What is this?", ans: "plane", wrongs: ["ship", "train", "bus"], trans: "Máy bay.", exp: "" },
+    { sec: "Getting Started (Ex 4)", type: "vis", vis: "🚆", q: "What is this?", ans: "train", wrongs: ["bus", "car", "bicycle"], trans: "Tàu hỏa.", exp: "" },
+    { sec: "Getting Started (Ex 4)", type: "vis", vis: "🚤", q: "What is this?", ans: "boat", wrongs: ["ship", "car", "plane"], trans: "Thuyền nhỏ.", exp: "" },
+    { sec: "Getting Started (Ex 4)", type: "vis", vis: "🚢", q: "What is this?", ans: "ship", wrongs: ["boat", "train", "bus"], trans: "Tàu thủy lớn.", exp: "" },
+
+    // --- A CLOSER LOOK 1 ---
+    // Ex 1: Match
+    { sec: "A Closer Look 1 (Ex 1)", type: "text", q: "Choose the correct phrase: ______ a bike", ans: "ride", wrongs: ["drive", "sail", "fly"], trans: "Lái xe đạp (Ride).", exp: "Ride a bike/horse." },
+    { sec: "A Closer Look 1 (Ex 1)", type: "text", q: "Choose the correct phrase: ______ a car", ans: "drive", wrongs: ["ride", "sail", "go"], trans: "Lái ô tô (Drive).", exp: "Drive a car/bus." },
+    { sec: "A Closer Look 1 (Ex 1)", type: "text", q: "Choose the correct phrase: ______ a boat", ans: "sail", wrongs: ["drive", "ride", "fly"], trans: "Lái thuyền (Sail).", exp: "Sail a boat." },
+    { sec: "A Closer Look 1 (Ex 1)", type: "text", q: "Choose the correct phrase: ______ on foot", ans: "go", wrongs: ["drive", "ride", "travel"], trans: "Đi bộ (Go on foot).", exp: "" },
+    { sec: "A Closer Look 1 (Ex 1)", type: "text", q: "Choose the correct phrase: ______ by air", ans: "travel", wrongs: ["drive", "ride", "sail"], trans: "Đi lại bằng máy bay.", exp: "Travel by air." },
+
+    // Ex 2: Signs (Visuals)
+    { sec: "A Closer Look 1 (Ex 2)", type: "vis", vis: "🚦", q: "What does this sign mean?", ans: "Traffic lights", wrongs: ["No parking", "Stop", "Hospital ahead"], trans: "Đèn giao thông.", exp: "" },
+    { sec: "A Closer Look 1 (Ex 2)", type: "vis", vis: "🏥", q: "What does this sign mean?", ans: "Hospital ahead", wrongs: ["School ahead", "Hotel ahead", "No cycling"], trans: "Bệnh viện phía trước.", exp: "" },
+    { sec: "A Closer Look 1 (Ex 2)", type: "vis", vis: "⭕↱", q: "What does this sign mean?", ans: "No right turn", wrongs: ["Right turn only", "Cycle lane", "No left turn"], trans: "Cấm rẽ phải.", exp: "Vòng tròn đỏ gạch chéo là Cấm." },
+    { sec: "A Closer Look 1 (Ex 2)", type: "vis", vis: "🟦🚲", q: "What does this sign mean?", ans: "Cycle lane", wrongs: ["No cycling", "Parking", "Traffic lights"], trans: "Làn đường xe đạp.", exp: "Biển xanh vuông là chỉ dẫn." },
+    { sec: "A Closer Look 1 (Ex 2)", type: "vis", vis: "⚠️🏃", q: "What does this sign mean?", ans: "School ahead", wrongs: ["Hospital ahead", "No running", "Traffic lights"], trans: "Trường học phía trước.", exp: "Biển tam giác vàng là cảnh báo." },
+    { sec: "A Closer Look 1 (Ex 2)", type: "vis", vis: "⭕🚲", q: "What does this sign mean?", ans: "No cycling", wrongs: ["Cycle lane", "Ride a bike", "School ahead"], trans: "Cấm xe đạp.", exp: "Vòng tròn đỏ gạch chéo." },
+
+    // Ex 5: Pronunciation
+    { sec: "Pronunciation", type: "text", q: "Which word has sound **/aɪ/**?", ans: "cycle", wrongs: ["sail", "train", "plane"], trans: "Chọn từ có âm /ai/.", exp: "Cycle /saɪkl/." },
+    { sec: "Pronunciation", type: "text", q: "Which word has sound **/aɪ/**?", ans: "fly", wrongs: ["pay", "stay", "wait"], trans: "Chọn từ có âm /ai/.", exp: "Fly /flaɪ/." },
+    { sec: "Pronunciation", type: "text", q: "Which word has sound **/eɪ/**?", ans: "station", wrongs: ["fine", "sign", "cycle"], trans: "Chọn từ có âm /ei/.", exp: "Station /steɪʃn/." },
+    { sec: "Pronunciation", type: "text", q: "Which word has sound **/eɪ/**?", ans: "train", wrongs: ["time", "light", "my"], trans: "Chọn từ có âm /ei/.", exp: "Train /treɪn/." },
+
+    // --- A CLOSER LOOK 2 ---
+    // Ex 1: Distance
+    { sec: "A Closer Look 2 (Grammar)", type: "text", q: "Make sentence: 700m / my flat / Youth Club", ans: "It is about 700m from my flat to the Youth Club.", wrongs: ["My flat is 700m to the Youth Club.", "It is 700m my flat to Youth Club."], trans: "Khoảng 700m từ nhà tôi đến CLB.", exp: "Cấu trúc: It is + distance + from A + to B." },
+    { sec: "A Closer Look 2 (Grammar)", type: "text", q: "Make sentence: 5 km / my village / nearest town", ans: "It is about 5 km from my village to the nearest town.", wrongs: ["It is 5 km from my village the nearest town.", "My village is 5 km to the nearest town."], trans: "Khoảng 5km từ làng đến thị trấn.", exp: "" },
+    { sec: "A Closer Look 2 (Grammar)", type: "text", q: "Make sentence: 120 km / HCMC / Vung Tau", ans: "It is about 120 km from HCMC to Vung Tau.", wrongs: ["From HCMC to Vung Tau is 120 km.", "It is 120 km HCMC to Vung Tau."], trans: "Khoảng 120km từ TP.HCM đi Vũng Tàu.", exp: "" },
+    { sec: "A Closer Look 2 (Grammar)", type: "text", q: "Make sentence: 384,400 km / Earth / Moon", ans: "It is about 384,400 km from the Earth to the Moon.", wrongs: ["The Earth is 384,400 km to the Moon.", "It is 384,400 km the Earth to the Moon."], trans: "Khoảng cách từ Trái Đất đến Mặt Trăng.", exp: "" },
+    { sec: "A Closer Look 2 (Grammar)", type: "text", q: "Make sentence: not very far / Ha Noi / Noi Bai Airport", ans: "It is not very far from Ha Noi to Noi Bai Airport.", wrongs: ["It not very far from Ha Noi to Noi Bai Airport.", "Ha Noi is not very far to Noi Bai Airport."], trans: "Không xa lắm từ HN đến sân bay NB.", exp: "" },
+
+    // Ex 3: Should/Shouldn't (Choice)
+    { sec: "Grammar: Should", type: "text", q: "You ______ read that book. It's interesting.", ans: "should", wrongs: ["shouldn't", "mustn't"], trans: "Bạn NÊN đọc sách đó.", exp: "Lời khuyên tích cực." },
+    { sec: "Grammar: Should", type: "text", q: "You ______ be more careful. You nearly fell!", ans: "should", wrongs: ["shouldn't", "won't"], trans: "Bạn NÊN cẩn thận.", exp: "" },
+    { sec: "Grammar: Should", type: "text", q: "We ______ go swimming right after eating.", ans: "shouldn't", wrongs: ["should", "can"], trans: "KHÔNG NÊN bơi ngay sau khi ăn.", exp: "Hại sức khỏe." },
+    { sec: "Grammar: Should", type: "text", q: "He ______ eat less. He's becoming overweight.", ans: "should", wrongs: ["shouldn't", "mustn't"], trans: "Anh ấy NÊN ăn ít lại.", exp: "" },
+    { sec: "Grammar: Should", type: "text", q: "He ______ drive so fast. There are many cars.", ans: "shouldn't", wrongs: ["should", "can"], trans: "Anh ấy KHÔNG NÊN lái nhanh.", exp: "" },
+
+    // Ex 4: Fill in blanks
+    { sec: "Grammar: Should", type: "text", q: "We ______ ride our motorbikes very fast in the rain.", ans: "shouldn't", wrongs: ["should"], trans: "KHÔNG NÊN lái nhanh khi mưa.", exp: "Nguy hiểm." },
+    { sec: "Grammar: Should", type: "text", q: "You ______ study instead of watching YouTube.", ans: "should", wrongs: ["shouldn't"], trans: "NÊN học bài.", exp: "Việc tốt." },
+    { sec: "Grammar: Should", type: "text", q: "My little sister ______ play outside late at night.", ans: "shouldn't", wrongs: ["should"], trans: "KHÔNG NÊN chơi khuya.", exp: "Nguy hiểm." },
+    { sec: "Grammar: Should", type: "text", q: "You ______ help your mum wash the dishes.", ans: "should", wrongs: ["shouldn't"], trans: "NÊN giúp mẹ.", exp: "Việc tốt." },
+    { sec: "Grammar: Should", type: "text", q: "You look tired. You ______ get some sleep.", ans: "should", wrongs: ["shouldn't"], trans: "NÊN đi ngủ.", exp: "Sức khỏe." },
+    { sec: "Grammar: Should", type: "text", q: "The children ______ eat so much ice cream.", ans: "shouldn't", wrongs: ["should"], trans: "KHÔNG NÊN ăn nhiều kem.", exp: "Hại họng/răng." },
+
+    // Ex 5: Picture Cues (Visuals)
+    { sec: "Grammar: Situations", type: "vis", vis: "🚰", q: "He is wasting water. He ______ do that.", ans: "shouldn't", wrongs: ["should"], trans: "Anh ấy KHÔNG NÊN lãng phí nước.", exp: "" },
+    { sec: "Grammar: Situations", type: "vis", vis: "⛑️", q: "They are riding bikes. They ______ wear helmets.", ans: "should", wrongs: ["shouldn't"], trans: "NÊN đội mũ bảo hiểm.", exp: "Luật an toàn." },
+    { sec: "Grammar: Situations", type: "vis", vis: "📚🚲", q: "She dropped her books. She ______ be more careful.", ans: "should", wrongs: ["shouldn't"], trans: "NÊN cẩn thận hơn.", exp: "" },
+    { sec: "Grammar: Situations", type: "vis", vis: "⚽🛣️", q: "They ______ play football on the pavement.", ans: "shouldn't", wrongs: ["should"], trans: "KHÔNG NÊN đá bóng trên vỉa hè.", exp: "Nguy hiểm." },
+    { sec: "Grammar: Situations", type: "vis", vis: "🚲👐", q: "They ______ ride their bikes dangerously.", ans: "shouldn't", wrongs: ["should"], trans: "KHÔNG NÊN lái xe nguy hiểm.", exp: "" },
+
+    // --- SKILLS 1 (Reading) ---
+    {
+        sec: "Skills 1: Reading Rules", type: "dialogue", content: txtRules,
+        q: "1. Where should pedestrians cross the street?",
+        ans: "At the zebra crossing", wrongs: ["Anywhere", "Near the bus stop", "In the middle of road"],
+        trans: "Người đi bộ nên sang đường ở vạch kẻ.", exp: "Rule 3 (Pedestrians)."
+    },
+    {
+        sec: "Skills 1: Reading", type: "text",
+        q: "2. Which lane should cyclists use?",
+        ans: "Cycle lane", wrongs: ["Car lane", "Pavement", "Footpath"],
+        trans: "Người đi xe đạp dùng làn xe đạp.", exp: "Rule 2 (Cyclists)."
+    },
+    {
+        sec: "Skills 1: Reading", type: "text",
+        q: "3. What should cyclists do before turning?",
+        ans: "Give a signal", wrongs: ["Stop", "Shout", "Ride faster"],
+        trans: "Ra tín hiệu trước khi rẽ.", exp: "Rule 3 (Cyclists)."
+    },
+    {
+        sec: "Skills 1: Reading", type: "text",
+        q: "4. What must you do when getting on/off a bus?",
+        ans: "Wait for it to stop fully", wrongs: ["Jump quickly", "Push others", "Run"],
+        trans: "Chờ xe dừng hẳn.", exp: "Rule 2 (Passengers)."
+    },
+    {
+        sec: "Skills 1: Reading", type: "text",
+        q: "5. What must you NOT do in a moving vehicle?",
+        ans: "Stick body parts out of window", wrongs: ["Wear a seatbelt", "Sit still", "Talk softly"],
+        trans: "Không thò đầu/tay ra ngoài cửa sổ.", exp: "Rule 4 (Passengers)."
+    },
+
+    // --- LOOKING BACK ---
+    // Ex 2: Fill gaps
+    { sec: "Looking Back", type: "text", q: "1. A road ______ is anyone who uses a road.", ans: "user", wrongs: ["worker", "safety", "maker"], trans: "Người tham gia giao thông.", exp: "Road user." },
+    { sec: "Looking Back", type: "text", q: "2. Does your dad ______ his motorbike carefully?", ans: "ride", wrongs: ["drive", "sail", "fly"], trans: "Lái xe máy.", exp: "Motorbike dùng 'ride'." },
+    { sec: "Looking Back", type: "text", q: "3. A ______ is a person travelling in a vehicle but not driving.", ans: "passenger", wrongs: ["pilot", "driver", "cyclist"], trans: "Hành khách.", exp: "Passenger." },
+    { sec: "Looking Back", type: "text", q: "4. He is learning to ______ planes.", ans: "fly", wrongs: ["ride", "drive", "sail"], trans: "Lái máy bay.", exp: "Plane dùng 'fly'." },
+    { sec: "Looking Back", type: "text", q: "5. Be careful when the traffic ______ turns yellow.", ans: "light", wrongs: ["sign", "rule", "jam"], trans: "Đèn giao thông.", exp: "Traffic light." },
+    
+    // Ex 3: Distance
+    { sec: "Looking Back", type: "text", q: "Make sentence: not very far / school / museum", ans: "It is not very far from our school to the museum.", wrongs: ["It not very far from our school to the museum.", "Our school is not very far to the museum."], trans: "Không xa lắm.", exp: "Câu phủ định với It is." },
+    
+    // Ex 4: Choose correct answer
+    { sec: "Looking Back", type: "text", q: "1. You ______ put rubbish in the bin.", ans: "should", wrongs: ["would", "shouldn't"], trans: "Bạn NÊN bỏ rác vào thùng.", exp: "Hành động đúng." },
+    { sec: "Looking Back", type: "text", q: "2. You ______ be over 18 to ride a motorbike.", ans: "must", wrongs: ["should", "could"], trans: "Bạn PHẢI trên 18 tuổi.", exp: "Quy định bắt buộc (Must)." },
+    { sec: "Looking Back", type: "text", q: "3. Children ______ ride their bikes too fast.", ans: "shouldn't", wrongs: ["mightn't", "wouldn't"], trans: "Trẻ em KHÔNG NÊN lái nhanh.", exp: "Nguy hiểm." },
+    { sec: "Looking Back", type: "text", q: "4. I am lost. ______ you help me?", ans: "Could", wrongs: ["Should", "Must"], trans: "Bạn có thể giúp tôi không?", exp: "Lời đề nghị lịch sự (Could)." },
+    { sec: "Looking Back", type: "text", q: "5. You ______ eat so many cookies.", ans: "shouldn't", wrongs: ["couldn't", "wouldn't"], trans: "KHÔNG NÊN ăn nhiều bánh.", exp: "Hại sức khỏe." },
+    { sec: "Looking Back", type: "text", q: "6. This is a park. You ______ run or cycle here.", ans: "can", wrongs: ["should", "could"], trans: "Bạn CÓ THỂ chạy ở đây.", exp: "Sự cho phép (Can)." }
+];
+
+/* =================================================================
+   2. CORE FUNCTIONS
+   ================================================================= */
+let currentIdx = 0;
+let score = 0;
+let timer;
+let synth = window.speechSynthesis;
+
+// Shuffle function
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+// Text to Speech
+function speak(content, btnId) {
+    if (synth.speaking) {
+        synth.cancel();
+        return;
+    }
+    const btn = document.getElementById(btnId);
+    btn.classList.add('playing');
+    btn.innerHTML = "⏹ Đang đọc...";
+
+    let idx = 0;
+    function next() {
+        if (idx >= content.length) {
+            btn.classList.remove('playing');
+            btn.innerText = "🔊 Nghe đoạn văn";
+            return;
+        }
+        const item = content[idx];
+        const u = new SpeechSynthesisUtterance(item.t);
+        u.lang = 'en-US';
+        
+        const voices = synth.getVoices();
+        const m = voices.find(v => v.name.includes("Male"));
+        const f = voices.find(v => v.name.includes("Female"));
+        
+        if(item.r === "Mark") { if(m) u.voice = m; u.pitch = 0.9; }
+        else if(item.r === "Lan") { if(f) u.voice = f; u.pitch = 1.1; }
+        
+        u.onend = () => { idx++; next(); };
+        synth.speak(u);
+    }
+    next();
+}
+
+function toggleTrans(id) {
+    const els = document.querySelectorAll(`.vn-${id}`);
+    els.forEach(el => el.classList.toggle('hidden'));
+}
+
+// Game Logic
+function startGame() {
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('total').innerText = db.length;
+    synth.getVoices();
+    loadQ();
+}
+
+function loadQ() {
+    clearTimeout(timer);
+    synth.cancel();
+    document.getElementById('timer').style.width = "0%";
+    document.getElementById('timer').style.transition = "none";
+
+    const data = db[currentIdx];
+    const area = document.getElementById('game-area');
+    
+    // Update Progress
+    document.getElementById('progress').style.width = `${((currentIdx)/db.length)*100}%`;
+
+    area.innerHTML = '';
+    
+    // Badge
+    const badge = document.createElement('div');
+    badge.className = 'section-badge';
+    badge.innerText = data.sec;
+    area.appendChild(badge);
+
+    // Reading/Visual with Translation
+    if(data.type === 'dialogue') {
+        let box = `<div class="reading-box">`;
+        data.content.forEach((l, i) => {
+            box += `<div style="margin-bottom:8px">
+                <div class="line"><span class="role ${l.r}">${l.r}:</span> ${l.t}</div>
+                <div class="vn-trans vn-${currentIdx} hidden">${l.v}</div>
+            </div>`;
+        });
+        box += `</div>
+        <div style="display:flex; gap:10px;">
+            <button id="aud-${currentIdx}" class="btn-control">🔊 Nghe đoạn văn</button>
+            <button onclick="toggleTrans(${currentIdx})" class="btn-control btn-trans">🇻🇳 Xem dịch tiếng Việt</button>
+        </div>`;
+        area.innerHTML += box;
+        setTimeout(() => {
+            document.getElementById(`aud-${currentIdx}`).onclick = () => speak(data.content, `aud-${currentIdx}`);
+        }, 0);
+    } else if (data.type === 'vis') {
+        area.innerHTML += `<div style="text-align:center"><div class="visual-box">${data.vis}</div></div>`;
+    }
+
+    // Question
+    const qDiv = document.createElement('div');
+    qDiv.className = 'question-text';
+    qDiv.innerText = `Câu ${currentIdx + 1}: ${data.q}`;
+    area.appendChild(qDiv);
+
+    // Options (Randomize Position)
+    const optDiv = document.createElement('div');
+    optDiv.className = 'options-grid';
+    
+    let options = [{txt: data.ans, correct: true}, ...data.wrongs.map(w => ({txt: w, correct: false}))];
+    options = shuffle(options); 
+
+    options.forEach(o => {
+        const btn = document.createElement('button');
+        btn.className = 'opt-btn';
+        btn.innerText = o.txt;
+        btn.onclick = () => check(btn, o.correct);
+        optDiv.appendChild(btn);
+    });
+    area.appendChild(optDiv);
+
+    // Feedback
+    const fbDiv = document.createElement('div');
+    fbDiv.id = 'fb-panel';
+    fbDiv.className = 'feedback';
+    fbDiv.innerHTML = `
+        <div id="fb-status" class="fb-status"></div>
+        <span class="fb-trans">Dịch: ${data.trans}</span>
+        <div class="fb-exp">💡 ${data.exp}</div>
+        <div class="auto-msg">⏳ Tự động chuyển câu sau 4 giây...</div>
+    `;
+    area.appendChild(fbDiv);
+}
+
+function check(btn, isCorrect) {
+    // Disable all buttons
+    const btns = document.querySelectorAll('.opt-btn');
+    btns.forEach(b => b.classList.add('disabled'));
+
+    const fb = document.getElementById('fb-panel');
+    const status = document.getElementById('fb-status');
+
+    if (isCorrect) {
+        btn.classList.add('correct');
+        status.innerText = "✅ CHÍNH XÁC!";
+        status.style.color = "var(--secondary)";
+        score++;
+        document.getElementById('score').innerText = score;
+    } else {
+        btn.classList.add('wrong');
+        status.innerText = "❌ SAI RỒI!";
+        status.style.color = "var(--wrong)";
+        
+        // Highlight correct one
+        const correctTxt = db[currentIdx].ans;
+        btns.forEach(b => {
+            if (b.innerText === correctTxt) b.classList.add('correct');
+        });
+    }
+
+    fb.classList.add('show');
+
+    // Timer Animation
+    const line = document.getElementById('timer');
+    line.style.transition = "width 4s linear";
+    line.style.width = "100%";
+
+    timer = setTimeout(() => {
+        if(currentIdx < db.length - 1) {
+            currentIdx++;
+            loadQ();
+        } else {
+            finish();
+        }
+    }, 4000);
+}
+
+function finish() {
+    document.getElementById('game-area').style.display = 'none';
+    document.getElementById('end-screen').style.display = 'flex';
+    document.getElementById('final-score').innerText = `${score} / ${db.length}`;
+}
+
+</script>
+</body>
+</html>
